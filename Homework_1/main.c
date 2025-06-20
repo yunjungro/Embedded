@@ -1,70 +1,58 @@
 #include "ledtest.h"
 #include "buttontest.h"
 #include "buzzertest.h"
-#include "stdio.h"
+#include <stdio.h>
 
-int main() {
-    BUTTON_MSG_T Data;
+int ledFlag[LED_CNT] = {0};
+
+int main(void)
+{
+    BUTTON_MSG_T msg;
+
     ledLibInit();
     buttonInit();
     buzzerInit();
 
-    int msgID = msgget (MESSAGE_ID, IPC_CREAT|0666);
+    int qid = msgget(MESSAGE_ID, IPC_CREAT | 0666);
 
-    while(1) {
-    //struct input_event stEvent;	
-        int returnValue = 0;
-        returnValue = msgrcv(msgID, &Data, sizeof(Data) - sizeof(long int), 0, 0);
-            
-        if(Data.type== EV_KEY){
-            
-            if ( Data.pressed ) {
-                switch(Data.keyInput) {
-                    case KEY_HOME: 
-                        printf("HOME KEY pressed -> [LED 0] : ON | [BUZZER] : DO \r\n");
-                        ledOnOff(0, 1);
-                        buzzerTone(DO);
-                        break;
-                    case KEY_BACK: 
-                        printf("BACK KEY pressed -> [LED 1] : ON | [BUZZER] : DO \r\n");
-                        ledOnOff(1, 1);
-                        buzzerTone(RE);
-                        break;
-                    case KEY_SEARCH: 
-                        printf("SEARCH KEY pressed -> [LED 2] : ON | [BUZZER] : DO \r\n");
-                        ledOnOff(2, 1);
-                        buzzerTone(MI);
-                        break;
-                    case KEY_MENU: 
-                        printf("MEMU KEY pressed -> [LED 3] : ON | [BUZZER] : DO \r\n");
-                        ledOnOff(3, 1);
-                        buzzerTone(FA);
-                        break;
-                    case KEY_VOLUMEUP: 
-                        printf("VOLUMEUP KEY pressed -> [LED 4] : ON | [BUZZER] : DO \r\n");
-                        ledOnOff(4, 1);
-                        buzzerTone(SOL);
-                        break;
-                    case KEY_VOLUMEDOWN: 
-                        printf("VOLUMEDOWN KEY pressed [LED 5] : ON | [BUZZER] : DO \r\n");
-                        ledOnOff(5, 2);
-                        buzzerTone(RA);
-                        break;
-                }
+    while (1)
+    {
+        if (msgrcv(qid, &msg, sizeof(msg) - sizeof(long), 0, 0) < 0)
+            continue;
+        if (msg.type != EV_KEY)
+            continue;
+
+        if (msg.pressed)                       /* key down */
+        {
+            int ledNo = -1, hz = 0;
+            const char *note = "";
+
+            switch (msg.keyInput) {
+                case KEY_HOME:       ledNo = 0; hz = DO;  note = "do"; break;
+                case KEY_BACK:       ledNo = 1; hz = RE;  note = "re"; break;
+                case KEY_SEARCH:     ledNo = 2; hz = MI;  note = "mi"; break;
+                case KEY_MENU:       ledNo = 3; hz = FA;  note = "fa"; break;
+                case KEY_VOLUMEUP:   ledNo = 4; hz = SOL; note = "sol"; break;
+                case KEY_VOLUMEDOWN: ledNo = 5; hz = RA;  note = "la"; break;
             }
-            else {
-                printf("Button Relased -> [LED ALL] : OFF | [BUZZER] : OFF\r\n");
-                ledOnOff(0, 0); ledOnOff(1, 0); ledOnOff(2, 0); ledOnOff(3, 0); ledOnOff(4, 0); ledOnOff(5, 0);
-                buzzerStop();
-                //textLCDClear();
+            if (ledNo >= 0) {
+                ledFlag[ledNo] ^= 1;
+                ledOnOff(ledNo, ledFlag[ledNo]);
+                buzzerTone(hz);
+                printf("Btn %d → LED %s, buzzer : %s\n",
+                       ledNo,
+                       ledFlag[ledNo] ? "ON" : "OFF",
+                       note);
             }
-        } 
-    } 
+        }
+        else                                    /* key up  */
+        {
+            buzzerStop();
+        }
+    }
 
-
-        buttonExit();
-        ledLibExit();
-        buzzerExit();
-
-        return 0;
+    buttonExit();
+    ledLibExit();
+    buzzerExit();
+    return 0;
 }
