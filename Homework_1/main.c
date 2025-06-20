@@ -1,7 +1,11 @@
+/* Button → LED toggle + tone */
+
 #include "ledtest.h"
 #include "buttontest.h"
 #include "buzzertest.h"
 #include <stdio.h>
+
+
 
 int ledFlag[LED_CNT] = {0};
 
@@ -56,3 +60,4 @@ int main(void)
     buzzerExit();
     return 0;
 }
+
